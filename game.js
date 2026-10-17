@@ -3,6 +3,7 @@
 // =============================================================
 (function () {
   const CFG = INSTELLINGEN;
+  const VERSIE = 3;   // zie je dit nummer op het startscherm, dan heb je de nieuwste versie
   const T = 3;          // grootte van één tegel in meters
   const MUUR_H = 3;     // hoogte van muren
   const OOG = 1.6;      // ooghoogte van de speler
@@ -120,9 +121,11 @@
   }
 
   // ---------- geluid (zelf gemaakt met WebAudio) ----------
-  let ac, ruisBuf;
+  let ac, ruisBuf, stilAudio;
   function audio() {
     if (!ac) {
+      // iPhone: ook geluid als de telefoon op 'stil' staat (anders hoor je niks)
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* oud toestel */ }
       ac = new (window.AudioContext || window.webkitAudioContext)();
       ruisBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
       const d = ruisBuf.getChannelData(0);
@@ -130,6 +133,26 @@
     }
     return ac;
   }
+
+  // Telefoons zetten geluid soms op 'pauze' (bij de start, na een ander app of een telefoontje).
+  // Bij elke aanraking zetten we het weer aan.
+  function ontgrendelAudio() {
+    const a = audio();
+    if (a.state !== 'running' && !document.hidden) a.resume().catch?.(() => {});
+    // oudere iPhones: een stil geluidje afspelen zorgt dat de 'stil'-knop het spel niet dempt
+    if (!navigator.audioSession && !stilAudio && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+      const n = 4410, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+      const tekst = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      tekst(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); tekst(8, 'WAVEfmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+      tekst(36, 'data'); v.setUint32(40, n * 2, true);
+      stilAudio = new Audio(URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })));
+      stilAudio.loop = true;
+      stilAudio.play().catch(() => { stilAudio = null; });
+    }
+  }
+
   function geluid(soort, afstand = 0) {
     try {
       const a = audio(), t = a.currentTime;
@@ -209,7 +232,7 @@
       o.frequency.value = f * h; o.detune.value = (Math.random() - 0.5) * 6;
       const g = a.createGain(), d = duur / (1 + k * 0.8);
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(sterkte * amp * 1.8, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(sterkte * amp * 3, t + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, t + d);
       o.connect(g); g.connect(muziekBus);
       o.start(t); o.stop(t + d + 0.05);
@@ -847,7 +870,7 @@
 
   function startScherm() {
     staat = 'start';
-    toonScherm(`<h1>Nieuwe Game</h1><p class="sub">ontworpen door Mats</p>${uitleg()}
+    toonScherm(`<h1>Nieuwe Game</h1><p class="sub">ontworpen door Mats · versie ${VERSIE}</p>${uitleg()}
       <button id="knopStart">Spelen</button>`, true);
     $('knopStart').onclick = () => {
       if (touchModus) {
@@ -860,8 +883,7 @@
   }
 
   function vergrendel() {
-    audio();
-    if (ac.state === 'suspended') ac.resume();
+    ontgrendelAudio();
     zetMuziek(muziekAan);
     if (touchModus || geenLock) { staat = 'spelen'; verbergScherm(); return; }
     try {
@@ -1019,6 +1041,8 @@
       else if (staat === 'spelen') pauze();
     });
     document.addEventListener('pointerlockerror', lockMislukt);
+    // geluid aanzetten bij elke tik/klik (nodig op telefoons)
+    for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, ontgrendelAudio, { capture: true, passive: true });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && staat === 'spelen') pauze();
       if (ac) { if (document.hidden) ac.suspend(); else ac.resume(); }
