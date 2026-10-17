@@ -39,6 +39,15 @@ button { margin-top: 14px; font-size: 22px; font-weight: 700; padding: 12px 40px
   background: #8bc34a; color: #111; cursor: pointer; }
 button:hover { background: #a5d65f; }
 
+/* ---------- instellingen ---------- */
+.instellingen { margin-top: 16px; padding-top: 12px; border-top: 1px solid #333; display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center; gap: 10px 24px; }
+.instellingen h2 { width: 100%; margin: 0; font-size: 16px; color: #aaa; font-weight: 600; }
+.instellingen label { display: flex; align-items: center; gap: 8px; }
+button.schakel { margin: 0; font-size: 15px; padding: 5px 16px; min-width: 64px; }
+button.schakel.uit { background: #555; color: #ddd; }
+.instellingen input[type=range] { width: 120px; accent-color: #8bc34a; }
+
 /* ---------- mobiel ---------- */
 html, body { touch-action: none; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 #touch, #draai { display: none; }
@@ -66,6 +75,7 @@ body.touch #touch { position: absolute; inset: 0; }
 .tk.klein { width: 44px; height: 44px; font-size: 20px; top: 8px; }
 #tKaart { left: calc(var(--l) + 120px); }
 #tPauze { left: calc(var(--l) + 170px); }
+#tMuziek { left: calc(var(--l) + 220px); }
 @media (orientation: portrait) {
   body.touch #draai { display: block; position: absolute; left: 50%; top: 128px; transform: translateX(-50%);
     background: rgba(0,0,0,.6); padding: 6px 12px; border-radius: 8px; font-size: 13px; white-space: nowrap; }
@@ -77,6 +87,13 @@ body.touch #touch { position: absolute; inset: 0; }
   .paneel { padding: 16px 18px; margin: auto; }
   .paneel h1 { font-size: 30px; }
   .uitleg p { font-size: 14px; margin: 6px 0; }
+  #overlay { touch-action: pan-y; }
+  .instellingen { margin-top: 10px; padding-top: 8px; }
   .uitleg td { padding: 1px 10px; font-size: 14px; }
   button { font-size: 18px; padding: 10px 30px; margin-top: 8px; }
+}
+@media (max-height: 500px) {
+  .uitleg p, .sub { display: none; }
+  .uitleg table { margin: 4px auto; }
+  .instellingen h2 { display: none; }
 }

@@ -164,6 +164,113 @@
     } catch (e) { /* geen geluid, geen probleem */ }
   }
 
+  // ---------- achtergrondmuziek ----------
+  // Rustige piano met veel galm en stiltes ertussen. De muziek wordt tijdens het spelen
+  // steeds opnieuw verzonnen, dus het klinkt nooit precies hetzelfde.
+  const opslag = {
+    lees(k, std) { try { const v = localStorage.getItem('nieuweGame.' + k); return v === null ? std : JSON.parse(v); } catch (e) { return std; } },
+    schrijf(k, v) { try { localStorage.setItem('nieuweGame.' + k, JSON.stringify(v)); } catch (e) { /* niet erg */ } },
+  };
+  let muziekAan = opslag.lees('muziek', CFG.muziekAan);
+  let muziekVolume = opslag.lees('muziekVolume', CFG.muziekVolume);
+  let muziekBus = null, muziekVolgende = 0, muziekTimer = null, akkoordNr = 0;
+
+  const AKKOORDEN = [
+    [48, 55, 64, 71], // Cmaj7
+    [45, 52, 60, 67], // Am7
+    [41, 48, 57, 64], // Fmaj7
+    [43, 50, 59, 62], // G
+    [40, 47, 55, 62], // Em7
+  ];
+  const TOONLADDER = [0, 2, 4, 7, 9, 11];
+
+  function muziekKlaar() {
+    const a = audio();
+    if (!muziekBus) {
+      muziekBus = a.createGain(); muziekBus.gain.value = 0;
+      const filter = a.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 2800;
+      const len = a.sampleRate * 3.5, buf = a.createBuffer(2, len, a.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+      }
+      const galm = a.createConvolver(); galm.buffer = buf;
+      const nat = a.createGain(); nat.gain.value = 0.45;
+      muziekBus.connect(filter); filter.connect(a.destination);
+      filter.connect(galm); galm.connect(nat); nat.connect(a.destination);
+    }
+    return a;
+  }
+
+  function pianoNoot(a, midi, t, sterkte, duur) {
+    const f = 440 * Math.pow(2, (midi - 69) / 12);
+    [[1, 1], [2, 0.35], [3, 0.12], [4, 0.06]].forEach(([h, amp], k) => {
+      const o = a.createOscillator(); o.type = 'sine';
+      o.frequency.value = f * h; o.detune.value = (Math.random() - 0.5) * 6;
+      const g = a.createGain(), d = duur / (1 + k * 0.8);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(sterkte * amp * 1.8, t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(muziekBus);
+      o.start(t); o.stop(t + d + 0.05);
+    });
+  }
+
+  function speelFrase(a, t) {
+    akkoordNr = (akkoordNr + 1 + (Math.random() < 0.3 ? 1 : 0)) % AKKOORDEN.length;
+    const ak = AKKOORDEN[akkoordNr], tel = 0.6 + Math.random() * 0.25;
+    pianoNoot(a, ak[0], t, 0.09, 7);
+    ak.slice(1).forEach((m, k) => pianoNoot(a, m, t + 0.15 * (k + 1), 0.05, 6));
+    const akkoordTonen = ak.map(m => m % 12);
+    let tijd = t + tel * 2, vorige = 72;
+    const aantal = 3 + Math.floor(Math.random() * 5);
+    for (let n = 0; n < aantal; n++) {
+      if (Math.random() < 0.2) { tijd += tel; continue; }
+      const kies = [];
+      for (const oct of [60, 72, 84]) for (const s of TOONLADDER) {
+        const m = oct + s;
+        if (m < 62 || m > 86 || m === vorige || Math.abs(m - vorige) > 7) continue;
+        kies.push(m);
+        if (akkoordTonen.includes(m % 12)) kies.push(m);
+      }
+      vorige = kies[Math.floor(Math.random() * kies.length)];
+      pianoNoot(a, vorige, tijd, 0.06 + Math.random() * 0.03, 4);
+      tijd += tel * (Math.random() < 0.6 ? 1 : 2);
+    }
+    return tijd - t + tel * 2;
+  }
+
+  function muziekLus() {
+    clearTimeout(muziekTimer);
+    if (!muziekAan || !ac) return;
+    if (muziekVolgende < ac.currentTime + 0.5) {
+      muziekVolgende = Math.max(muziekVolgende, ac.currentTime + 0.2);
+      const lengte = speelFrase(ac, muziekVolgende);
+      // soms een lange stilte, net als in Minecraft
+      muziekVolgende += lengte + (Math.random() < 0.35 ? 5 + Math.random() * 10 : 0.8);
+    }
+    muziekTimer = setTimeout(muziekLus, 300);
+  }
+
+  function zetMuziek(aan) {
+    muziekAan = aan; opslag.schrijf('muziek', aan);
+    if (!ac) return;
+    muziekKlaar();
+    muziekBus.gain.cancelScheduledValues(ac.currentTime);
+    muziekBus.gain.setTargetAtTime(aan ? muziekVolume : 0, ac.currentTime, 0.3);
+    if (aan) muziekLus(); else clearTimeout(muziekTimer);
+  }
+
+  function zetMuziekVolume(v) {
+    muziekVolume = v; opslag.schrijf('muziekVolume', v);
+    if (muziekBus && muziekAan) muziekBus.gain.setTargetAtTime(v, ac.currentTime, 0.1);
+  }
+
+  function wisselMuziek() {
+    zetMuziek(!muziekAan);
+    bericht(muziekAan ? 'Muziek aan' : 'Muziek uit', 1);
+  }
+
   // ---------- 3D-modellen ----------
   function ruisTextuur() {
     const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -687,11 +794,24 @@
   }
 
   // ---------- schermen (start, pauze, dood, gewonnen) ----------
-  function toonScherm(html) {
+  function toonScherm(html, metInstellingen = false) {
     const o = $('overlay');
-    o.innerHTML = `<div class="paneel">${html}</div>`;
+    const inst = metInstellingen ? `
+      <div class="instellingen">
+        <h2>⚙️ Instellingen</h2>
+        <label>🎵 Muziek <button id="knopMuziek" class="schakel"></button></label>
+        <label>Volume <input id="muziekVol" type="range" min="0" max="1" step="0.05" value="${muziekVolume}"></label>
+      </div>` : '';
+    o.innerHTML = `<div class="paneel">${html}${inst}</div>`;
     o.style.display = 'flex';
     $('hud').style.display = staat === 'start' ? 'none' : 'block';
+    if (metInstellingen) {
+      const knop = $('knopMuziek');
+      const toon = () => { knop.textContent = muziekAan ? 'Aan' : 'Uit'; knop.classList.toggle('uit', !muziekAan); };
+      toon();
+      knop.onclick = () => { audio(); zetMuziek(!muziekAan); toon(); };
+      $('muziekVol').oninput = e => zetMuziekVolume(parseFloat(e.target.value));
+    }
   }
   function verbergScherm() { $('overlay').style.display = 'none'; $('hud').style.display = 'block'; }
 
@@ -705,6 +825,7 @@
         <tr><td>🔫</td><td>schieten (vasthouden)</td></tr>
         <tr><td>↻</td><td>herladen</td></tr>
         <tr><td>🚪</td><td>deur open / dicht</td></tr>
+        <tr><td>🎵</td><td>muziek aan / uit</td></tr>
       </table>
     </div>`;
   const UITLEG_PC = `
@@ -718,6 +839,7 @@
         <tr><td><kbd>R</kbd></td><td>herladen</td></tr>
         <tr><td><kbd>E</kbd></td><td>deur open / dicht</td></tr>
         <tr><td><kbd>M</kbd></td><td>kaartje aan / uit</td></tr>
+        <tr><td><kbd>N</kbd></td><td>muziek aan / uit</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>pauze</td></tr>
       </table>
     </div>`;
@@ -726,7 +848,7 @@
   function startScherm() {
     staat = 'start';
     toonScherm(`<h1>Nieuwe Game</h1><p class="sub">ontworpen door Mats</p>${uitleg()}
-      <button id="knopStart">Spelen</button>`);
+      <button id="knopStart">Spelen</button>`, true);
     $('knopStart').onclick = () => {
       if (touchModus) {
         const el = document.documentElement;
@@ -739,6 +861,8 @@
 
   function vergrendel() {
     audio();
+    if (ac.state === 'suspended') ac.resume();
+    zetMuziek(muziekAan);
     if (touchModus || geenLock) { staat = 'spelen'; verbergScherm(); return; }
     try {
       const p = renderer.domElement.requestPointerLock();
@@ -759,7 +883,7 @@
   function pauze() {
     staat = 'pauze';
     loslaten();
-    toonScherm(`<h1>Pauze</h1>${uitleg()}<button id="knopVerder">Verder spelen</button>`);
+    toonScherm(`<h1>Pauze</h1>${uitleg()}<button id="knopVerder">Verder spelen</button>`, true);
     $('knopVerder').onclick = vergrendel;
   }
 
@@ -810,6 +934,7 @@
     knop('tDeur', wisselDeur);
     knop('tKaart', () => { minimapAan = !minimapAan; minimapCd = 0; });
     knop('tPauze', pauze);
+    knop('tMuziek', wisselMuziek);
     // vuurknop: vasthouden = schieten, en slepen = ook rondkijken
     $('tVuur').addEventListener('touchstart', e => {
       e.preventDefault(); e.stopPropagation();
@@ -875,6 +1000,7 @@
       if (e.code === 'KeyE') wisselDeur();
       if (e.code === 'KeyR') herlaad();
       if (e.code === 'KeyM') { minimapAan = !minimapAan; minimapCd = 0; }
+      if (e.code === 'KeyN') wisselMuziek();
       if (geenLock && (e.code === 'Escape' || e.code === 'KeyP')) pauze();
     });
     addEventListener('keyup', e => { toetsen[e.code] = false; });
@@ -893,7 +1019,10 @@
       else if (staat === 'spelen') pauze();
     });
     document.addEventListener('pointerlockerror', lockMislukt);
-    document.addEventListener('visibilitychange', () => { if (document.hidden && staat === 'spelen') pauze(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && staat === 'spelen') pauze();
+      if (ac) { if (document.hidden) ac.suspend(); else ac.resume(); }
+    });
     addEventListener('resize', () => {
       renderer.setSize(innerWidth, innerHeight);
       if (camera) { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
@@ -936,6 +1065,6 @@
   // alleen voor testen: open index.html#debug
   if (location.hash === '#debug') window.__spel = {
     get speler() { return speler; }, get zombies() { return zombies; }, get items() { return items; },
-    get staat() { return staat; }, get joy() { return joy; }, get deuren() { return deuren; }, kaart: () => kaart, T, idx: (x, y) => idx(x, y),
+    get staat() { return staat; }, get joy() { return joy; }, get muziek() { return { aan: muziekAan, volume: muziekVolume, bus: muziekBus && muziekBus.gain.value, ac: ac && ac.state }; }, get deuren() { return deuren; }, kaart: () => kaart, T, idx: (x, y) => idx(x, y),
   };
 })();

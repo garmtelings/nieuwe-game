@@ -33,4 +33,8 @@ const INSTELLINGEN = {
   aantalRevives: 1,          // "als je 100% op bent kan je één keer reviven"
   muisGevoeligheid: 0.0022,
   minimap: true,             // kaartje linksboven (aan/uit met M)
+
+  // --- Muziek ---
+  muziekAan: true,           // achtergrondmuziek aan bij de eerste keer spelen (daarna onthoudt het spel je keuze)
+  muziekVolume: 0.6,         // 0 = stil, 1 = hard
 };

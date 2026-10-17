@@ -8,8 +8,8 @@ Het hele ontwerp staat in `ontwerp.md`.
 - **Als app op telefoon:** open de link en kies *Toevoegen aan beginscherm* (iPhone: deelknop → Zet op beginscherm). Daarna werkt het ook zonder internet.
 - **Op de PC zonder internet:** dubbelklik op `index.html`.
 
-**Besturing PC:** WASD = lopen, muis = kijken, klik = schieten, R = herladen, E = deur open/dicht, M = kaartje, Esc = pauze.
-**Besturing telefoon:** linkerduim = lopen (joystick verschijnt waar je drukt), rechts vegen = kijken, 🔫 vasthouden = schieten, ↻ = herladen, 🚪 = deur, 🗺️ = kaartje, ⏸ = pauze. Telefoon liggend houden werkt het best.
+**Besturing PC:** WASD = lopen, muis = kijken, klik = schieten, R = herladen, E = deur open/dicht, M = kaartje, N = muziek aan/uit, Esc = pauze.
+**Besturing telefoon:** linkerduim = lopen (joystick verschijnt waar je drukt), rechts vegen = kijken, 🔫 vasthouden = schieten, ↻ = herladen, 🚪 = deur, 🗺️ = kaartje, ⏸ = pauze, 🎵 = muziek aan/uit. Telefoon liggend houden werkt het best.
 
 ## Nieuwe versie online zetten
 Na het aanpassen: `git add -A`, `git commit -m "wat je veranderd hebt"`, `git push`. Na ongeveer een minuut staat het online.
@@ -35,3 +35,8 @@ de kans op zombies en hoeveel damage de pistolen doen. Verander een getal, sla o
 - Hoe groot de map is: nu 30 kamers (`aantalKamers`).
 - Een kaartje linksboven (toets M) om de weg te vinden. Dit stond niet in het ontwerp.
 - Deuren beginnen dicht. Zombies kunnen niet door een dichte deur.
+
+## Muziek
+Rustige pianomuziek, een beetje zoals in Minecraft. De muziek wordt steeds opnieuw verzonnen door het spel zelf,
+dus het klinkt nooit precies hetzelfde. Aan/uit en volume staan bij **Instellingen** op het start- en pauzescherm
+(en met N of de 🎵-knop tijdens het spelen). Het spel onthoudt je keuze. Standaard staat hij aan (`muziekAan` in `config.js`).
