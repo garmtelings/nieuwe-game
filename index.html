@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#050608">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>Nieuwe Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="hud">
+    <div id="tellers">
+      <div>🔑 Sleutels <b id="nSleutels">0</b>/<span id="totSleutels">5</span></div>
+      <div>💎 Scherven <b id="nScherven">0</b>/<span id="totScherven">5</span></div>
+    </div>
+    <canvas id="minimap" width="200" height="200"></canvas>
+    <div id="leven">
+      <div id="levenBalk"><div id="levenVul"></div></div>
+      <span id="levenTekst">100%</span>
+      <span id="revives"></span>
+    </div>
+    <div id="wapen">Geen pistool</div>
+    <div id="vizier"></div>
+    <div id="bericht"></div>
+    <div id="touch">
+      <div id="stick"><div id="stickKnop"></div></div>
+      <button id="tVuur" class="tk">🔫</button>
+      <button id="tHerlaad" class="tk">↻</button>
+      <button id="tDeur" class="tk">🚪</button>
+      <button id="tKaart" class="tk klein">🗺️</button>
+      <button id="tPauze" class="tk klein">⏸</button>
+    </div>
+    <div id="draai">Draai je telefoon voor een groter beeld</div>
+  </div>
+  <div id="pijn"></div>
+  <div id="overlay"></div>
+
+  <script src="vendor/three.min.js"></script>
+  <script src="config.js"></script>
+  <script src="map.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
